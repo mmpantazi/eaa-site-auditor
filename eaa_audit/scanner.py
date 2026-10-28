@@ -4,6 +4,7 @@ import os
 from dataclasses import dataclass, field
 from urllib.parse import unquote, urlparse
 
+from .advice import FIX
 from .checks import PageChecker, stylesheet_findings
 from .css import Cascade, parse_stylesheet
 from .dom import parse_html
@@ -25,6 +26,7 @@ class ScanResult:
     stylesheets: list
     remote_styles: list
     missing_styles: list
+    unsupported_css: list
 
 
 def find_pages(root):
@@ -46,7 +48,7 @@ def scan(root):
     root = os.path.abspath(root)
     pages = find_pages(root)
     sheet_cache, remote, missing = {}, set(), set()
-    findings, parsed_sheets = [], []
+    findings, parsed_sheets, unsupported = [], [], set()
     ctx = SiteContext()
 
     def load_sheet(path):
@@ -57,6 +59,7 @@ def scan(root):
         return sheet_cache[path]
 
     inline_seen = 0
+    titles = {}
     for page in pages:
         rel = os.path.relpath(page, root)
         tree = parse_html(_read(page))
@@ -81,15 +84,26 @@ def scan(root):
                 rules.extend(parsed_rules)
                 parsed_sheets.append(parsed_rules)
         cascade = Cascade(rules, tree)
-        findings.extend(PageChecker(tree, cascade, rel, ctx).run())
+        page_findings = PageChecker(tree, cascade, rel, ctx).run()
+        unsupported |= cascade.unsupported
+        titles.setdefault(_title(tree), []).append(rel)
+        findings.extend(page_findings)
 
     for rules in parsed_sheets:
         findings.extend(stylesheet_findings(rules, None))
-    if not pages:
-        findings.append(Finding("no-pages", "-", "-", "review", ".", 0, "No .html files found in this folder."))
+    for title, files in titles.items():
+        if title and len(files) >= 3:
+            for f in files[1:]:
+                findings.append(Finding("duplicate-title", "2.4.2", "A", "review", f, 0,
+                                        f'Same <title> "{title}" as {len(files) - 1} other page(s): titles should tell pages apart.'))
     return ScanResult(root, [os.path.relpath(p, root) for p in pages], findings,
                       sorted(os.path.relpath(p, root) for p in sheet_cache),
-                      sorted(remote), sorted(missing))
+                      sorted(remote), sorted(missing), sorted(unsupported))
+
+
+def _title(tree):
+    node = next((n for n in tree.walk() if n.tag == "title"), None)
+    return " ".join(node.text().split()) if node else ""
 
 
 def group(findings):
@@ -104,7 +118,7 @@ def group(findings):
         f = g["first"]
         locs = sorted(g["locations"])
         out.append({"rule": f.rule, "wcag": f.wcag, "level": f.level, "kind": f.kind,
-                    "message": f.message, "snippet": f.snippet, "locations": locs,
+                    "message": f.message, "fix": FIX.get(f.rule, ""), "snippet": f.snippet, "locations": locs,
                     "pages": len({p for p, _ in locs})})
     out.sort(key=lambda g: (g["kind"] != "fail", g["wcag"], g["rule"], -g["pages"]))
     return out

@@ -16,6 +16,7 @@ SC_NAMES = {
         "1.2.2": "Captions for video",
         "1.3.1": "Info and relationships (structure)",
         "1.3.5": "Identify input purpose",
+        "1.4.1": "Use of colour (links distinguishable from text)",
         "1.4.2": "Audio control",
         "1.4.3": "Contrast (minimum)",
         "1.4.4": "Resize text",
@@ -42,6 +43,7 @@ SC_NAMES = {
         "1.2.2": "Subtitrări pentru video",
         "1.3.1": "Informații și relații (structură)",
         "1.3.5": "Identificarea scopului câmpurilor",
+        "1.4.1": "Utilizarea culorii (linkuri distincte de text)",
         "1.4.2": "Controlul sunetului",
         "1.4.3": "Contrast (minim)",
         "1.4.4": "Redimensionarea textului",
@@ -68,6 +70,7 @@ SC_NAMES = {
         "1.2.2": "Untertitel für Videos",
         "1.3.1": "Info und Beziehungen (Struktur)",
         "1.3.5": "Zweck von Eingabefeldern bestimmen",
+        "1.4.1": "Verwendung von Farbe (Links vom Text unterscheidbar)",
         "1.4.2": "Audiosteuerung",
         "1.4.3": "Kontrast (Minimum)",
         "1.4.4": "Textgröße ändern",
@@ -94,9 +97,10 @@ T = {
     "en": {
         "title": "Accessibility statement for {org}",
         "intro": "{org} is committed to making {site} accessible to people with disabilities, in line with the European Accessibility Act (Directive (EU) 2019/882) and the standard EN 301 549, which refers to the Web Content Accessibility Guidelines (WCAG).",
+        "law": "National law: {law}.",
         "h_status": "Conformance status",
-        "status_partial": "{site} is partially conformant with WCAG 2.2 level AA. Partially conformant means that some parts of the content do not fully meet the standard.",
-        "status_full": "{site} is fully conformant with WCAG 2.2 level AA, based on the evaluation described below.",
+        "status_partial": "{site} is partially conformant with EN 301 549 (which requires WCAG 2.1 level AA). We also check the newer WCAG 2.2 criteria. Partially conformant means that some parts of the content do not fully meet the standard.",
+        "status_full": "{site} is fully conformant with EN 301 549 (WCAG 2.1 level AA) and the WCAG 2.2 level AA criteria we checked, based on the evaluation described below.",
         "h_limits": "Known limitations",
         "limits_none": "The automated check found no failures. This does not prove that the site has no barriers.",
         "limits_intro": "The following content does not yet meet the requirements:",
@@ -123,9 +127,10 @@ T = {
     "ro": {
         "title": "Declarație de accesibilitate pentru {org}",
         "intro": "{org} se angajează să facă {site} accesibil persoanelor cu dizabilități, în conformitate cu Actul european privind accesibilitatea (Directiva (UE) 2019/882) și cu standardul EN 301 549, care face trimitere la Ghidul pentru accesibilitatea conținutului web (WCAG).",
+        "law": "Legislația națională: {law}.",
         "h_status": "Starea de conformitate",
-        "status_partial": "{site} este parțial conform cu WCAG 2.2 nivel AA. Parțial conform înseamnă că unele părți ale conținutului nu respectă pe deplin standardul.",
-        "status_full": "{site} este pe deplin conform cu WCAG 2.2 nivel AA, pe baza evaluării descrise mai jos.",
+        "status_partial": "{site} este parțial conform cu EN 301 549 (care cere WCAG 2.1 nivel AA). Verificăm și criteriile mai noi din WCAG 2.2. Parțial conform înseamnă că unele părți ale conținutului nu respectă pe deplin standardul.",
+        "status_full": "{site} este pe deplin conform cu EN 301 549 (WCAG 2.1 nivel AA) și cu criteriile WCAG 2.2 nivel AA verificate, pe baza evaluării descrise mai jos.",
         "h_limits": "Limitări cunoscute",
         "limits_none": "Verificarea automată nu a găsit erori. Acest lucru nu dovedește că site-ul nu are bariere.",
         "limits_intro": "Următorul conținut nu respectă încă cerințele:",
@@ -152,9 +157,10 @@ T = {
     "de": {
         "title": "Erklärung zur Barrierefreiheit für {org}",
         "intro": "{org} bemüht sich, {site} für Menschen mit Behinderungen zugänglich zu machen, gemäß dem Europäischen Barrierefreiheitsgesetz (Richtlinie (EU) 2019/882) und der Norm EN 301 549, die auf die Web Content Accessibility Guidelines (WCAG) verweist.",
+        "law": "Nationales Recht: {law}.",
         "h_status": "Stand der Vereinbarkeit",
-        "status_partial": "{site} ist teilweise mit WCAG 2.2 Stufe AA vereinbar. Teilweise vereinbar bedeutet, dass einige Inhalte die Norm nicht vollständig erfüllen.",
-        "status_full": "{site} ist auf Grundlage der unten beschriebenen Bewertung vollständig mit WCAG 2.2 Stufe AA vereinbar.",
+        "status_partial": "{site} ist teilweise mit EN 301 549 (die WCAG 2.1 Stufe AA verlangt) vereinbar. Wir prüfen zusätzlich die neueren Kriterien von WCAG 2.2. Teilweise vereinbar bedeutet, dass einige Inhalte die Norm nicht vollständig erfüllen.",
+        "status_full": "{site} ist auf Grundlage der unten beschriebenen Bewertung vollständig mit EN 301 549 (WCAG 2.1 Stufe AA) und den geprüften WCAG-2.2-Kriterien Stufe AA vereinbar.",
         "h_limits": "Bekannte Einschränkungen",
         "limits_none": "Die automatische Prüfung hat keine Fehler gefunden. Das beweist nicht, dass die Website barrierefrei ist.",
         "limits_intro": "Die folgenden Inhalte erfüllen die Anforderungen noch nicht:",
@@ -210,6 +216,14 @@ MANUAL_LOCAL = {
 }
 
 
+NATIONAL_LAW = {"en": "", "ro": "Legea nr. 232/2022", "de": "Barrierefreiheitsstärkungsgesetz (BFSG)"}
+AUTHORITY_HINT = {
+    "en": "national market surveillance / enforcement body and URL",
+    "ro": "autoritatea competentă pentru sectorul dvs. (ANPC, Autoritatea pentru Digitalizarea României, ANCOM, CNA …) și URL",
+    "de": "zuständige Marktüberwachungsbehörde und URL",
+}
+
+
 def starter_config(lang="en"):
     return {
         "language": lang,
@@ -220,7 +234,8 @@ def starter_config(lang="en"):
         "contact_address": "",
         "response_days": 14,
         "microenterprise": False,
-        "enforcement_authority": TODO.format("national market surveillance / enforcement body and URL"),
+        "national_law": NATIONAL_LAW[lang],
+        "enforcement_authority": TODO.format(AUTHORITY_HINT[lang]),
         "measures": [],
         "manual_review_done": False,
         "manual_reviewer": "",
@@ -251,8 +266,11 @@ def build_blocks(result, cfg, lang):
     full = manual_done and not fails
     today = cfg.get("date") or datetime.date.today().isoformat()
 
+    intro = t["intro"].format(org=org, site=site)
+    if cfg.get("national_law"):
+        intro += " " + t["law"].format(law=cfg["national_law"])
     blocks = [("h1", t["title"].format(org=org)),
-              ("p", t["intro"].format(org=org, site=site)),
+              ("p", intro),
               ("h2", t["h_status"]),
               ("p", t["status_full" if full else "status_partial"].format(site=site)),
               ("h2", t["h_limits"])]

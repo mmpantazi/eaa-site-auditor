@@ -29,6 +29,7 @@ def summary(result):
         "reviews": sum(1 for g in groups if g["kind"] == "review"),
         "remote_stylesheets": result.remote_styles,
         "missing_stylesheets": result.missing_styles,
+        "ignored_css_rules": len(result.unsupported_css),
     }
 
 
@@ -52,6 +53,8 @@ def to_text(result, color=False):
         lines.append(f"       {g['message']}")
         if g["snippet"]:
             lines.append(f"       {dim}{g['snippet']}{off}")
+        if g["fix"]:
+            lines.append(f"       Fix: {g['fix']}")
         for f, ln in g["locations"][:3]:
             lines.append(f"       at {f}:{ln}")
         if len(g["locations"]) > 3:
@@ -61,6 +64,8 @@ def to_text(result, color=False):
         lines.append(f"Note: {len(s['remote_stylesheets'])} remote stylesheet(s) were not fetched; contrast results may be incomplete.")
     if s["missing_stylesheets"]:
         lines.append(f"Note: {len(s['missing_stylesheets'])} linked stylesheet(s) not found in the folder.")
+    if s["ignored_css_rules"]:
+        lines.append(f"Note: {s['ignored_css_rules']} CSS rule(s) set colours with selectors this tool cannot evaluate (e.g. :not(), sibling combinators); contrast may be incomplete.")
     lines.append(f"Result: {s['failures']} failing issue type(s) ({s['failure_instances']} places), {s['reviews']} item(s) to review by hand.")
     lines.append("Automated checks find only part of all WCAG problems; see 'manual checks' in the HTML/JSON report.")
     return "\n".join(lines)
@@ -75,8 +80,9 @@ def to_html(result):
         kind = "Fail" if g["kind"] == "fail" else "Review"
         wcag = f"WCAG {g['wcag']} (level {g['level']})" if g["wcag"] != "-" else "Note"
         snippet = f"<p><code>{escape(g['snippet'])}</code></p>" if g["snippet"] else ""
+        fix = f"<p><strong>Fix:</strong> {escape(g['fix'])}</p>" if g["fix"] else ""
         rows.append(f"<article><h3><span class=\"k {g['kind']}\">{kind}</span> {escape(g['rule'])}</h3>"
-                    f"<p>{escape(wcag)}, {g['pages']} page(s)</p><p>{escape(g['message'])}</p>{snippet}"
+                    f"<p>{escape(wcag)}, {g['pages']} page(s)</p><p>{escape(g['message'])}</p>{snippet}{fix}"
                     f"<ul>{locs}{more}</ul></article>")
     manual = "".join(f"<li>{escape(m)}</li>" for m in MANUAL_ONLY)
     return f"""<!DOCTYPE html>

@@ -16,7 +16,7 @@ python3 -m eaa_audit statement ./dist --lang ro -o declaratie.html
 
 Or `pip install .` and use the `eaa-audit` command. Tests: `python3 -m unittest discover -s tests`.
 
-`--fail-on fail|review|never` controls the exit code (default `fail`).
+`--fail-on fail|review|never` controls the exit code (default `fail`); `--ignore rule-a,rule-b` skips rules. Exit code 2 means a usage problem (e.g. no HTML files found). Every finding includes a one-line fix.
 
 ## What it checks
 
@@ -29,6 +29,8 @@ Or `pip install .` and use the `eaa-audit` command. Tests: `python3 -m unittest 
 | Text contrast, computed from your own CSS files (selectors, inheritance, `var()`, alpha, large-text rule) | 1.4.3 |
 | Zoom blocked in viewport meta, meta refresh, marquee, autoplay | 1.4.4, 2.2.1, 2.2.2, 1.4.2 |
 | Focus outline removed with no replacement | 2.4.7 |
+| Links with underline removed | 1.4.1 (review) |
+| Same `<title>` on several pages | 2.4.2 (review) |
 | Sticky/fixed elements with no `scroll-padding` | 2.4.11 (review) |
 | Declared target size under 24 px | 2.5.8 (review) |
 | Paste blocked on fields | 3.3.8 |
@@ -45,10 +47,11 @@ Results are `FAIL` (definite) or `REVIEW` (a human must decide). Identical findi
 - the list of things only a human can verify;
 - contact, response time, enforcement body, date and method.
 
-It says "partially conformant" unless you set `manual_review_done: true` **and** the scan has no failures. Unfilled fields are written as `[TODO: …]` and the command warns. The generated HTML passes this tool's own scan.
+It names EN 301 549 (which requires WCAG 2.1 AA, the legal benchmark) and says the newer WCAG 2.2 criteria are also checked. The Romanian and German presets fill in the national law (Legea 232/2022, BFSG). It says "partially conformant" unless you set `manual_review_done: true` **and** the scan has no failures. Unfilled fields are written as `[TODO: …]` and the command warns. The generated HTML passes this tool's own scan.
 
 ## Limits
 
 - Static analysis only. Axe-core's own docs say automation finds roughly 57% of WCAG issues; this finds fewer. Treat it as a first pass before manual and screen reader testing.
+- CSS rules whose selectors it cannot evaluate and that set colours are counted in the report ("ignored CSS rules") so you know contrast may be incomplete.
 - CSS support: tag/class/id/attribute selectors, descendant and child combinators, `:root`, `var()`. Sibling combinators, `:not()`, pseudo-classes other than `:root`/`:first-child`, and width-conditional media queries are ignored.
 - Statement templates are drafts, not legal advice. Whether your business is exempt, and which authority handles complaints, depends on your national law; check it.

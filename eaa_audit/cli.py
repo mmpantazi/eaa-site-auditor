@@ -19,6 +19,7 @@ def build_parser():
     s.add_argument("folder")
     s.add_argument("--format", choices=["text", "json", "html"], default="text")
     s.add_argument("-o", "--output", help="write report to a file instead of stdout")
+    s.add_argument("--ignore", default="", metavar="RULES", help="comma-separated rule ids to skip, e.g. page-h1,target-size")
     s.add_argument("--fail-on", choices=["fail", "review", "never"], default="fail",
                    help="exit code 1 when this severity is found (default: fail)")
 
@@ -57,6 +58,11 @@ def main(argv=None):
         print(f"Not a folder: {args.folder}", file=sys.stderr)
         return 2
     result = scan(args.folder)
+    if not result.pages:
+        print(f"No .html files found in {args.folder}. Point this at your built site folder (dist/, public/, _site/).", file=sys.stderr)
+        return 2
+    ignored = {r.strip() for r in getattr(args, "ignore", "").split(",") if r.strip()}
+    result.findings = [f for f in result.findings if f.rule not in ignored]
 
     if args.cmd == "scan":
         if args.format == "json":

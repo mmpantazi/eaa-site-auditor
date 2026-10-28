@@ -193,6 +193,40 @@ def matches(node, compiled):
     return rec(node, len(compiled) - 1)
 
 
+_SIZE = re.compile(r"^([\d.]+)(px|rem|em|pt|%)$")
+_FONT_SHORTHAND_SIZE = re.compile(r"(?:^|\s)([\d.]+(?:px|rem|em|pt|%))(?:/\S+)?(?:\s|$)")
+
+
+def _sets_colour(decls):
+    return any(k in decls for k in ("color", "background", "background-color"))
+
+
+def _is_state_selector(selector):
+    return bool(re.search(r":(hover|focus|active|visited|focus-visible|focus-within|disabled|checked)|::", selector))
+
+
+def _expand_font(decl):
+    short = decl.get("font")
+    if short:
+        size = _FONT_SHORTHAND_SIZE.search(short)
+        weight = re.search(r"\b(bold|bolder|[1-9]00)\b", short)
+        if size:
+            decl.setdefault("font-size", size.group(1))
+        if weight:
+            decl.setdefault("font-weight", weight.group(1))
+    return decl
+
+
+def _font_px(value, parent_px):
+    base = float(parent_px[:-2]) if parent_px and parent_px.endswith("px") else 16.0
+    m = _SIZE.match((value or "").strip().lower())
+    if not m:
+        return f"{base:g}px"
+    n, unit = float(m.group(1)), m.group(2)
+    px = {"px": n, "rem": n * 16, "em": n * base, "pt": n * 96 / 72, "%": n * base / 100}[unit]
+    return f"{px:g}px"
+
+
 class Cascade:
     """Computes style properties for nodes of one document."""
 
@@ -200,10 +234,13 @@ class Cascade:
 
     def __init__(self, rules, root):
         self.buckets = {}
+        self.unsupported = set()
         for r in rules:
             compiled = _compile(r.selector)
             if compiled:
                 self.buckets.setdefault(_bucket_key(compiled[-1][1]), []).append((r, compiled))
+            elif _sets_colour(r.decls) and not _is_state_selector(r.selector):
+                self.unsupported.add((r.source, r.selector))
         self.root = root
         self._cache = {}
 
@@ -233,7 +270,9 @@ class Cascade:
             return self._cache[key]
         parent_style = self.style(node.parent) if node.parent is not None \
             and node.parent.tag != "#document" else {}
-        decl = self.declared(node)
+        decl = _expand_font(self.declared(node))
+        if node.tag == "a" and node.has("href") and "color" not in decl:
+            decl["color"] = "#0000ee"
         computed = {}
         for name in self.INHERITED:
             if name in parent_style:
@@ -245,6 +284,7 @@ class Cascade:
                 computed[name] = value
         for name in list(computed):
             computed[name] = self._resolve_vars(computed[name], computed)
+        computed["font-size"] = _font_px(computed.get("font-size"), parent_style.get("font-size"))
         if "color" in computed and computed["color"].strip().lower() in ("inherit", "currentcolor"):
             computed["color"] = parent_style.get("color", "")
         self._cache[key] = computed

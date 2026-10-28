@@ -1,5 +1,7 @@
+import atexit
 import io
 import json
+import shutil
 import os
 import tempfile
 import unittest
@@ -23,8 +25,14 @@ GOOD_PAGE = """<!DOCTYPE html>
 GOOD_CSS = "body{color:#222;background:#fff} a{color:#0033aa} a:focus{outline:2px solid #05f}"
 
 
-def make_site(files):
+def _tmp():
     d = tempfile.mkdtemp()
+    atexit.register(shutil.rmtree, d, ignore_errors=True)
+    return d
+
+
+def make_site(files):
+    d = _tmp()
     for name, content in files.items():
         path = os.path.join(d, name)
         os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -248,7 +256,7 @@ class ResolutionTests(unittest.TestCase):
         self.assertEqual(len(res.missing_styles), 1)
 
     def test_path_traversal_stylesheet_not_read(self):
-        outer = tempfile.mkdtemp()
+        outer = _tmp()
         with open(os.path.join(outer, "secret.css"), "w") as fh:
             fh.write("p{color:#fff}")
         site = os.path.join(outer, "site")
@@ -283,7 +291,7 @@ class CliTests(unittest.TestCase):
         self.assertTrue(data["manual_checks"])
 
     def test_init_refuses_overwrite(self):
-        d = tempfile.mkdtemp()
+        d = _tmp()
         path = os.path.join(d, "c.json")
         self.assertEqual(run_cli("init", "-o", path)[0], 0)
         self.assertEqual(run_cli("init", "-o", path)[0], 2)
@@ -294,7 +302,7 @@ class CliTests(unittest.TestCase):
 
     def test_statement_warns_about_todos(self):
         site = make_site({"i.html": page("x")})
-        cfgp = os.path.join(tempfile.mkdtemp(), "c.json")
+        cfgp = os.path.join(_tmp(), "c.json")
         run_cli("init", "-o", cfgp)
         code, out, err = run_cli("statement", site, "-c", cfgp)
         self.assertEqual(code, 0)
@@ -365,13 +373,80 @@ class StatementTests(unittest.TestCase):
         self.assertEqual(used - set(statement.SC_NAMES["en"]), set())
 
 
+class ReviewPassTests(unittest.TestCase):
+    def contrast_fail(self, css, body='<p class="t">Hello world</p>'):
+        files = {"i.html": page(body, '<link rel="stylesheet" href="s.css">'), "s.css": css}
+        return [f for f in scan(make_site(files)).findings if f.rule == "color-contrast"]
+
+    def test_em_font_size_relative_to_parent(self):
+        css = "main{font-size:10px} .t{color:#888;font-size:3em}"
+        self.assertFalse(self.contrast_fail(css))
+        css = "main{font-size:10px} .t{color:#888;font-size:1.2em}"
+        self.assertTrue(self.contrast_fail(css))
+
+    def test_font_shorthand(self):
+        self.assertFalse(self.contrast_fail(".t{color:#888;font:bold 20px/1.4 Arial}"))
+        self.assertTrue(self.contrast_fail(".t{color:#888;font:14px Arial}"))
+
+    def test_default_link_colour_is_ua_blue(self):
+        self.assertFalse(self.contrast_fail("body{color:#999}", '<a href="/x">Hello world</a>'))
+        self.assertTrue(self.contrast_fail("body{color:#999}", '<p>Hello world</p>'))
+
+    def test_unsupported_selector_is_reported(self):
+        files = {"i.html": page("<p>x</p>", '<link rel="stylesheet" href="s.css">'),
+                 "s.css": "p:not(.a){color:#eee} a:hover{color:red}"}
+        res = scan(make_site(files))
+        self.assertEqual(len(res.unsupported_css), 1)
+        self.assertEqual(report.summary(res)["ignored_css_rules"], 1)
+
+    def test_link_underline_removed(self):
+        files = {"i.html": page("<p>x</p>", '<link rel="stylesheet" href="s.css">'), "s.css": "a{text-decoration:none}"}
+        self.assertIn("link-underline", {f.rule for f in scan(make_site(files)).findings})
+
+    def test_duplicate_titles(self):
+        files = {f"p{i}.html": page("<p>x</p>").replace("<title>t</title>", "<title>Same</title>") for i in range(3)}
+        self.assertIn("duplicate-title", rules_found(files, "review"))
+
+    def test_fix_advice_in_json(self):
+        data = json.loads(report.to_json(scan(make_site({"i.html": page('<img src="a.png">')}))))
+        self.assertIn("alt=", data["findings"][0]["fix"])
+
+    def test_every_rule_has_advice(self):
+        import re
+        from eaa_audit import advice
+        with open(os.path.join(os.path.dirname(__file__), "..", "eaa_audit", "checks.py"), encoding="utf-8") as fh:
+            src = fh.read()
+        with open(os.path.join(os.path.dirname(__file__), "..", "eaa_audit", "scanner.py"), encoding="utf-8") as fh:
+            src += fh.read()
+        rules = set(re.findall(r'(?:self\.add|Finding)\(\s*"([\w-]+)"', src)) - {"no-pages"}
+        self.assertEqual(rules - set(advice.FIX), set())
+
+    def test_empty_folder_exits_2(self):
+        code, _, err = run_cli("scan", _tmp())
+        self.assertEqual(code, 2)
+        self.assertIn("No .html files", err)
+
+    def test_ignore_rules(self):
+        site = make_site({"i.html": page('<img src="a.png">')})
+        self.assertEqual(run_cli("scan", site)[0], 1)
+        self.assertEqual(run_cli("scan", site, "--ignore", "img-alt")[0], 0)
+
+    def test_national_law_and_standard_in_statement(self):
+        r = scan(make_site({"i.html": page("<p>x</p>")}))
+        cfg = dict(CFG, national_law="Legea nr. 232/2022")
+        text = statement.render(r, cfg, "ro", "md")[0]
+        self.assertIn("Legea nr. 232/2022", text)
+        self.assertIn("EN 301 549", text)
+        self.assertIn("Legea nr. 232/2022", statement.starter_config("ro")["national_law"])
+
+
 class DogfoodTests(unittest.TestCase):
     """Our own generated HTML must pass our own scanner."""
 
     def test_generated_pages_are_clean(self):
         site = make_site({"i.html": page('<img src="x.png">')})
         res = scan(site)
-        d = tempfile.mkdtemp()
+        d = _tmp()
         for lang in statement.LANGS:
             with open(os.path.join(d, f"s_{lang}.html"), "w", encoding="utf-8") as fh:
                 fh.write(statement.render(res, CFG, lang, "html")[0])

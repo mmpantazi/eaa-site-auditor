@@ -289,12 +289,7 @@ class PageChecker:
                 self.add("click-no-keyboard", "2.1.1", "A", "fail", n, "onclick on a non-interactive element: not reachable by keyboard.")
 
     def _font_px(self, st):
-        v = st.get("font-size", "").strip().lower()
-        m = re.fullmatch(r"([\d.]+)(px|rem|em|pt|%)?", v)
-        if not m:
-            return None
-        n = float(m.group(1))
-        return {"px": n, "rem": n * 16, "em": n * 16, "pt": n * 96 / 72, "%": n * .16, None: None}[m.group(2)]
+        return float(st.get("font-size", "16px")[:-2])
 
     def _bg(self, node):
         """Return (rgb, certain). Walk ancestors compositing backgrounds."""
@@ -350,7 +345,7 @@ class PageChecker:
                 continue
             fg = C.blend(fg, bg)
             ratio = C.contrast_ratio(fg, bg)
-            size = self._font_px(st) or 16
+            size = self._font_px(st)
             weight = st.get("font-weight", "400").strip().lower()
             bold = weight in ("bold", "bolder") or (weight.isdigit() and int(weight) >= 700)
             large = size >= 24 or (bold and size >= 18.66)
@@ -415,6 +410,13 @@ def stylesheet_findings(rules, path_of):
             out.append(Finding("focus-visible", "2.4.7", "AA", "fail", r.source, r.line,
                                "Focus outline removed and nothing replaces it: keyboard users cannot see where they are.",
                                r.selector + " { outline: none }"))
+    for r in rules:
+        d = {k: v[0].lower() for k, v in r.decls.items()}
+        if re.search(r"(^|[\s>])a$", r.selector) and "none" in d.get("text-decoration", d.get("text-decoration-line", "")):
+            out.append(Finding("link-underline", "1.4.1", "A", "review", r.source, r.line,
+                               "Links lose their underline: if links sit inside running text they must differ from the text by more than colour (3:1 contrast plus another cue).",
+                               r.selector))
+            break
     fixed = [r for r in rules if r.decls.get("position", ("",))[0].lower() in ("fixed", "sticky")]
     scroll_pad = any("scroll-padding" in k or "scroll-margin" in k for r in rules for k in r.decls)
     if fixed and not scroll_pad:
