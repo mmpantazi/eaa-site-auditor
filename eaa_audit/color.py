@@ -66,6 +66,13 @@ def parse_color(value):
     return None
 
 
+def find_color_token(value):
+    for tok in re.findall(r"#[0-9a-fA-F]{3,8}|(?:rgba?|hsla?)\([^)]*\)|[a-zA-Z]+", value):
+        if parse_color(tok):
+            return tok
+    return None
+
+
 def _chan(p):
     return round(float(p[:-1]) * 2.55) if p.endswith("%") else round(float(p))
 

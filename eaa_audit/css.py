@@ -3,6 +3,8 @@
 import re
 from dataclasses import dataclass, field
 
+from .color import find_color_token
+
 _COMMENT = re.compile(r"/\*.*?\*/", re.S)
 _VAR = re.compile(r"var\(\s*(--[\w-]+)\s*(?:,\s*([^)]*))?\)")
 
@@ -220,7 +222,7 @@ def _sets_colour(decls):
 
 
 def _is_state_selector(selector):
-    return bool(re.search(r":(hover|focus|active|visited|focus-visible|focus-within|disabled|checked)|::", selector))
+    return bool(re.search(r":(hover|focus|active|visited|focus-visible|focus-within|disabled|checked|before|after|first-line|first-letter)|::", selector))
 
 
 def _expand_font(decl):
@@ -280,6 +282,10 @@ class Cascade:
         out = {}
         for _, name, value in found:
             out[name] = value
+            if name == "background":
+                token = find_color_token(value)
+                out["background-color"] = token or (value if "var(" in value else "transparent")
+                out["background-image"] = value if re.search(r"url\(|gradient", value) else "none"
         return out
 
     def style(self, node):

@@ -228,6 +228,10 @@ class PageChecker:
         body = next((n for n in self.nodes if n.tag == "body"), None)
         if body is None:
             return
+        repeated = any(n.tag in ("nav", "header") or n.get("role") in ("navigation", "banner") for n in self.nodes) \
+            or len(self.by_tag("a")) >= 10
+        if not repeated:
+            has_main = True
         skip = any(n.tag == "a" and (n.get("href") or "").startswith("#") and len(n.get("href")) > 1
                    for n in list(body.walk())[:40])
         if not has_main and not skip:
@@ -291,6 +295,21 @@ class PageChecker:
                     and not n.has("tabindex") and not n.get("role"):
                 self.add("click-no-keyboard", "2.1.1", "A", "fail", n, "onclick on a non-interactive element: not reachable by keyboard.")
 
+    def _visually_hidden(self, node):
+        for n in [node, *node.ancestors()]:
+            if n.tag == "#document":
+                continue
+            d = self.cascade.declared(n)
+            if re.match(r"-\d{3,}", d.get("text-indent", "").strip()) or d.get("font-size", "").strip() in ("0", "0px"):
+                return True
+            if d.get("position", "").strip() not in ("absolute", "fixed"):
+                continue
+            tiny = [d.get(k, "").strip() in ("1px", "0", "0px") for k in ("width", "height")]
+            if "rect(" in d.get("clip", "") or "inset(" in d.get("clip-path", "") or all(tiny) \
+                    or re.match(r"-\d{3,}", d.get("left", d.get("top", "")).strip()):
+                return True
+        return False
+
     def _font_px(self, st):
         return float(st.get("font-size", "16px")[:-2])
 
@@ -305,7 +324,9 @@ class PageChecker:
             bgv = st.get("background-color") or ""
             short = st.get("background") or ""
             img = st.get("background-image", "") + " " + short
-            c = C.parse_color(bgv) or (C.parse_color(_color_token(short)) if short else None)
+            c = C.parse_color(bgv) or (C.parse_color(C.find_color_token(short)) if short else None)
+            if bgv.strip().lower() in ("inherit", "initial", "unset"):
+                bgv = ""
             uncertain = "var-unresolved" in bgv + short or (bgv and C.parse_color(bgv) is None)
             if "gradient" in img or ("url(" in img and not ("no-repeat" in img and c)):
                 uncertain = True
@@ -330,6 +351,8 @@ class PageChecker:
             if n.has("disabled") or self.hidden(n):
                 continue
             st = self.cascade.style(n)
+            if self._visually_hidden(n):
+                continue
             if any(a.has("disabled") for a in n.ancestors()):
                 continue
             fg_raw = st.get("color", "")
@@ -379,18 +402,17 @@ class PageChecker:
                 self.add("target-size", "2.5.8", "AA", "review", n, f"Declared {desc}: pointer targets should be at least 24x24 CSS px unless spaced out.")
 
 
-def _color_token(value):
-    for tok in re.findall(r"#[0-9a-fA-F]{3,8}|(?:rgba?|hsla?)\([^)]*\)|[a-zA-Z]+", value):
-        if C.parse_color(tok):
-            return tok
-    return None
+def _subject(selector):
+    """Last compound of a selector with focus pseudo-classes removed."""
+    plain = re.sub(r":focus-visible|:focus-within|:focus", "", selector)
+    return re.split(r"[\s>+~]+", plain.strip())[-1]
 
 
 def stylesheet_findings(rules):
     """Focus-visibility and sticky-obstruction checks over all rules of the site."""
     out = []
-    removes = []
-    has_focus_style = False
+    parsed = []
+    styled = set()
     for r in rules:
         d = {k: v[0].lower() for k, v in r.decls.items()}
         outline_off = d.get("outline", "") in ("none", "0", "0px") or d.get("outline-style") == "none" \
@@ -398,19 +420,20 @@ def stylesheet_findings(rules):
         replaces = any(k in d for k in ("box-shadow", "border", "border-color", "text-decoration", "background", "background-color")) \
             or (d.get("outline", "") not in ("", "none", "0", "0px") and not outline_off) or "outline-color" in d
         focus_sel = ":focus" in r.selector
-        if focus_sel and replaces and not outline_off:
-            has_focus_style = True
-        if focus_sel and replaces and outline_off:
-            has_focus_style = True
-        if outline_off:
-            removes.append((r, focus_sel, replaces))
-    for r, focus_sel, replaces in removes:
-        if replaces and focus_sel:
+        if focus_sel and replaces:
+            styled.add(_subject(r.selector))
+        parsed.append((r, outline_off, replaces, focus_sel))
+    any_focus_style = bool(styled)
+    for r, outline_off, replaces, focus_sel in parsed:
+        if not outline_off or (focus_sel and replaces) or ":not(:focus-visible)" in r.selector:
             continue
-        if focus_sel or not has_focus_style:
-            out.append(Finding("focus-visible", "2.4.7", "AA", "fail", r.source, r.line,
-                               "Focus outline removed and nothing replaces it: keyboard users cannot see where they are.",
-                               r.selector + " { outline: none }"))
+        if _subject(r.selector) in styled or (not focus_sel and any_focus_style):
+            continue
+        kind = "review" if focus_sel and any_focus_style else "fail"
+        out.append(Finding("focus-visible", "2.4.7", "AA", kind, r.source, r.line,
+                           "Focus outline removed and nothing replaces it: keyboard users cannot see where they are."
+                           if kind == "fail" else "Focus outline removed; the site has other focus styles, check this element still shows focus.",
+                           r.selector + " { outline: none }"))
     for r in rules:
         d = {k: v[0].lower() for k, v in r.decls.items()}
         if re.search(r"(^|[\s>])a$", r.selector) and "none" in d.get("text-decoration", d.get("text-decoration-line", "")):

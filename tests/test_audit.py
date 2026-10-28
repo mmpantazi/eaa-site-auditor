@@ -149,8 +149,10 @@ class RuleTests(unittest.TestCase):
         self.assertIn("viewport-zoom", rules_found({"i.html": page("x", head)}, "fail"))
 
     def test_bypass_needs_main_or_skip(self):
-        html = '<!DOCTYPE html><html lang="en"><head><title>t</title></head><body><div>x</div></body></html>'
+        html = '<!DOCTYPE html><html lang="en"><head><title>t</title></head><body><nav><a href="/a">A</a></nav><div>x</div></body></html>'
         self.assertIn("bypass-blocks", rules_found({"i.html": html}, "fail"))
+        tiny = '<!DOCTYPE html><html lang="en"><head><title>t</title></head><body><p>Just a note.</p></body></html>'
+        self.assertNotIn("bypass-blocks", rules_found({"i.html": tiny}))
 
     def test_aria_problems(self):
         r = rules_found({"i.html": page('<a href="/" aria-hidden="true">x</a><div role="banner2"></div><div aria-labelledby="zz"></div>')}, "fail")
@@ -489,6 +491,43 @@ class ReviewPassTests(unittest.TestCase):
             self.assertIn("HTML", text)
             self.assertIn("6", text)
             self.assertNotIn("{", text)
+
+    def sheet(self, css, body='<p class="t">Hello world</p>', link=""):
+        files = {"i.html": page(body, f'<link rel="stylesheet" href="s.css"{link}>'), "s.css": css}
+        return scan(make_site(files))
+
+    def test_dark_scheme_stylesheet_link_ignored(self):
+        res = self.sheet(".t{color:#444;background:#555}", link=' media="(prefers-color-scheme: dark)"')
+        self.assertEqual(res.stylesheets, [])
+        self.assertNotIn("color-contrast", {f.rule for f in res.findings})
+
+    def test_background_shorthand_resets_earlier_colour(self):
+        res = self.sheet(".t{background-color:#000;color:#000} .t{background:transparent}")
+        self.assertNotIn("color-contrast", {f.rule for f in res.findings})
+
+    def test_visually_hidden_text_skipped(self):
+        css = ".vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);color:#eee}"
+        res = self.sheet(css, '<p class="vh">Hidden label</p>')
+        self.assertNotIn("color-contrast", {f.rule for f in res.findings})
+
+    def test_text_indent_icon_button_skipped(self):
+        res = self.sheet("button{text-indent:-5000px;overflow:hidden;background:#d2e2f1;color:#1d70b8}", "<button>Search</button>")
+        self.assertNotIn("color-contrast", {f.rule for f in res.findings})
+
+    def test_background_inherit_is_not_uncertain(self):
+        res = self.sheet("main{background-color:inherit} .t{color:#333}")
+        self.assertNotIn("contrast-unknown", {f.rule for f in res.findings})
+
+    def test_focus_outline_patterns(self):
+        rules = lambda css: {(f.rule, f.kind) for f in self.sheet(css).findings if f.rule == "focus-visible"}
+        self.assertEqual(rules("a:focus:not(:focus-visible){outline:none}"), set())
+        self.assertEqual(rules(".nav .btn:focus{outline:none} .btn:focus{box-shadow:0 0 0 3px #05f}"), set())
+        self.assertEqual(rules("a:focus{outline:none}"), {("focus-visible", "fail")})
+        self.assertEqual(rules("a:focus{outline:none} button:focus{box-shadow:0 0 0 2px #05f}"), {("focus-visible", "review")})
+
+    def test_pseudo_element_rules_not_counted_as_unsupported(self):
+        res = self.sheet(".t:after{color:#fff} .t::before{color:red}")
+        self.assertEqual(res.unsupported_css, [])
 
     def test_empty_folder_exits_2(self):
         code, _, err = run_cli("scan", _tmp())

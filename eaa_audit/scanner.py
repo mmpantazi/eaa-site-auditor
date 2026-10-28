@@ -1,6 +1,7 @@
 """Walk a built site folder, resolve its CSS, run every check."""
 
 import os
+import re
 from dataclasses import dataclass, field
 from urllib.parse import unquote, urlparse
 
@@ -72,6 +73,8 @@ def scan(root):
         for node in tree.walk():
             if node.tag == "link" and "stylesheet" in (node.get("rel") or "").lower() and node.get("href"):
                 href = node.get("href")
+                if re.search(r"prefers-color-scheme:\s*dark|print", node.get("media") or "", re.I):
+                    continue
                 parsed = urlparse(href)
                 if parsed.scheme or href.startswith("//"):
                     remote.add(href)
