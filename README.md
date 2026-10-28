@@ -14,9 +14,9 @@ python3 -m eaa_audit init                           # writes eaa-statement.json
 python3 -m eaa_audit statement ./dist --lang ro -o declaratie.html
 ```
 
-Publish the generated statement at a stable URL such as `/accessibility` and link it from the footer of every page.
-
 Or `pip install .` and use the `eaa-audit` command. Tests: `python3 -m unittest discover -s tests`.
+
+Publish the generated statement at a stable URL such as `/accessibility` and link it from the footer of every page.
 
 `--fail-on fail|review|never` controls the exit code (default `fail`); `--ignore rule-a,rule-b` skips rules. Exit code 2 means a usage problem (e.g. no HTML files found). Every finding includes a one-line fix.
 
