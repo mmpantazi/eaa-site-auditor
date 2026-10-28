@@ -99,8 +99,7 @@ def parse_stylesheet(text, source, order_start=0):
 
 def _media_applies(prelude):
     p = prelude.lower()
-    return "prefers-color-scheme: dark" not in p and "print" not in p \
-        and "prefers-reduced-motion" not in p
+    return not re.search(r"prefers-color-scheme:\s*dark|print|prefers-reduced-motion|(min|max)-(width|height)", p)
 
 
 _TOKEN = re.compile(

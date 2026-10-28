@@ -79,6 +79,11 @@ class CssTests(unittest.TestCase):
                         "<p>x</p>", lambda n: n.tag == "p")
         self.assertEqual(st["color"], "#111")
 
+    def test_width_conditional_media_not_flattened(self):
+        st = self.style("p{color:#111} @media (max-width: 600px){p{color:#fff}}",
+                        "<p>x</p>", lambda n: n.tag == "p")
+        self.assertEqual(st["color"], "#111")
+
     def test_important_wins(self):
         st = self.style("p{color:red!important} #i{color:blue}", '<p id="i">x</p>', lambda n: n.tag == "p")
         self.assertEqual(st["color"], "red")

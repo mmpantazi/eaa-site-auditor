@@ -1,0 +1,12 @@
+[project]
+name = "eaa-site-auditor"
+version = "0.1.0"
+description = "Scan a built static site for common WCAG 2.2 failures and draft the EU accessibility statement"
+requires-python = ">=3.9"
+dependencies = []
+
+[project.scripts]
+eaa-audit = "eaa_audit.cli:main"
+
+[tool.setuptools]
+packages = ["eaa_audit"]
