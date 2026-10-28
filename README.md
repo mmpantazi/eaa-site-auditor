@@ -37,9 +37,9 @@ python3 -m eaa_audit scan ./dist --baseline a11y-baseline.json          # fails 
 | Form fields without labels, label pointing nowhere, missing `autocomplete` | 3.3.2, 1.3.1, 1.3.5 |
 | Links, buttons, frames, `role=button` without accessible name; vague link text | 2.4.4, 4.1.2 |
 | Missing `lang`, `<title>`; no `<main>`/skip link; heading problems | 3.1.1, 2.4.2, 2.4.1, 2.4.6, 1.3.1 |
-| Text contrast, computed from your own CSS files (selectors, inheritance, `var()`, alpha, large-text rule) | 1.4.3 |
+| Text contrast, computed from your own CSS files (selectors, inheritance, `var()`, `background` shorthand, alpha, large-text rule). Visually hidden text, dark-scheme-only stylesheets and `print` styles are skipped | 1.4.3 |
 | Zoom blocked in viewport meta, meta refresh, marquee, autoplay | 1.4.4, 2.2.1, 2.2.2, 1.4.2 |
-| Focus outline removed with no replacement | 2.4.7 |
+| Focus outline removed with no replacement; `onfocus="blur()"` | 2.4.7 |
 | Links with underline removed | 1.4.1 (review) |
 | Same `<title>` on several pages | 2.4.2 (review) |
 | Sticky/fixed elements with no `scroll-padding` | 2.4.11 (review) |
