@@ -1,0 +1,2 @@
+﻿Project: EAA Site Auditor: CLI that scans a built static site folder for common WCAG 2.2 failures (alt text, contrast, labels, headings, focus) and drafts the required accessibility statement, for small EU web shops and agencies | RO: verifică accesibilitatea unui site (WCAG) și scrie declarația de accesibilitate
+Follow the workflow in your CLAUDE.md. Work in the current folder.
