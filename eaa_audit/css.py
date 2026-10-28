@@ -169,6 +169,16 @@ def _match_compound(node, comp):
     return True
 
 
+def _bucket_key(comp):
+    if "id" in comp:
+        return ("id", comp["id"])
+    if "cls" in comp:
+        return ("cls", comp["cls"][0])
+    if comp.get("tag", "*") != "*":
+        return ("tag", comp["tag"])
+    return None
+
+
 def matches(node, compiled):
     def rec(n, idx):
         comb, comp = compiled[idx]
@@ -189,17 +199,21 @@ class Cascade:
     INHERITED = {"color", "font-size", "font-weight", "visibility"}
 
     def __init__(self, rules, root):
-        self.rules = []
+        self.buckets = {}
         for r in rules:
             compiled = _compile(r.selector)
             if compiled:
-                self.rules.append((r, compiled))
+                self.buckets.setdefault(_bucket_key(compiled[-1][1]), []).append((r, compiled))
         self.root = root
         self._cache = {}
 
     def declared(self, node):
         found = []
-        for r, compiled in self.rules:
+        keys = [None, ("tag", node.tag)] + [("cls", c) for c in node.classes()]
+        if node.get("id"):
+            keys.append(("id", node.get("id")))
+        candidates = [rc for k in keys for rc in self.buckets.get(k, ())]
+        for r, compiled in candidates:
             if matches(node, compiled):
                 for name, (value, imp) in r.decls.items():
                     found.append(((imp, r.specificity, r.order), name, value))
