@@ -92,6 +92,14 @@ class CssTests(unittest.TestCase):
                         "<p>x</p>", lambda n: n.tag == "p")
         self.assertEqual(st["color"], "#111")
 
+    def test_not_and_sibling_selectors(self):
+        html = '<div><h2>t</h2><p class="a">x</p><p class="b">y</p></div>'
+        st = self.style("p:not(.a){color:red} h2 + p{background:#111} h2 ~ p.b{border:0}", html, lambda n: n.get("class") == "b")
+        self.assertEqual(st["color"], "red")
+        a = self.style("p:not(.a){color:red} h2 + p{background-color:#111}", html, lambda n: n.get("class") == "a")
+        self.assertNotIn("color", a)
+        self.assertEqual(a["background-color"], "#111")
+
     def test_important_wins(self):
         st = self.style("p{color:red!important} #i{color:blue}", '<p id="i">x</p>', lambda n: n.tag == "p")
         self.assertEqual(st["color"], "red")
@@ -394,7 +402,7 @@ class ReviewPassTests(unittest.TestCase):
 
     def test_unsupported_selector_is_reported(self):
         files = {"i.html": page("<p>x</p>", '<link rel="stylesheet" href="s.css">'),
-                 "s.css": "p:not(.a){color:#eee} a:hover{color:red}"}
+                 "s.css": "p:nth-child(2n){color:#eee} a:hover{color:red}"}
         res = scan(make_site(files))
         self.assertEqual(len(res.unsupported_css), 1)
         self.assertEqual(report.summary(res)["ignored_css_rules"], 1)
@@ -420,6 +428,25 @@ class ReviewPassTests(unittest.TestCase):
             src += fh.read()
         rules = set(re.findall(r'(?:self\.add|Finding)\(\s*"([\w-]+)"', src)) - {"no-pages"}
         self.assertEqual(rules - set(advice.FIX), set())
+
+    def test_onfocus_blur(self):
+        self.assertIn("focus-blur", rules_found({"i.html": page('<a href="/x" onfocus="blur();">Go</a>')}, "fail"))
+
+    def test_no_headings_on_long_page(self):
+        self.assertIn("page-headings", rules_found({"i.html": page("<p>" + "word " * 120 + "</p>")}, "review"))
+
+    def test_icon_background_with_fallback_colour_is_certain(self):
+        css = "main{background:url(i.png) no-repeat 0 0 #fff} .t{color:#999}"
+        files = {"i.html": page('<p class="t">Hello world</p>', '<link rel="stylesheet" href="s.css">'), "s.css": css}
+        rules = {f.rule for f in scan(make_site(files)).findings}
+        self.assertIn("color-contrast", rules)
+        self.assertNotIn("contrast-unknown", rules)
+
+    def test_uncertain_background_reported_once_per_layer(self):
+        css = "main{background:linear-gradient(#000,#fff)}"
+        files = {"i.html": page("<p>one one</p><p>two two</p><p>three</p>", '<link rel="stylesheet" href="s.css">'), "s.css": css}
+        found = [f for f in scan(make_site(files)).findings if f.rule == "contrast-unknown"]
+        self.assertEqual(len(found), 1)
 
     def test_empty_folder_exits_2(self):
         code, _, err = run_cli("scan", _tmp())

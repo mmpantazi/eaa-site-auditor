@@ -14,6 +14,8 @@ python3 -m eaa_audit init                           # writes eaa-statement.json
 python3 -m eaa_audit statement ./dist --lang ro -o declaratie.html
 ```
 
+Publish the generated statement at a stable URL such as `/accessibility` and link it from the footer of every page.
+
 Or `pip install .` and use the `eaa-audit` command. Tests: `python3 -m unittest discover -s tests`.
 
 `--fail-on fail|review|never` controls the exit code (default `fail`); `--ignore rule-a,rule-b` skips rules. Exit code 2 means a usage problem (e.g. no HTML files found). Every finding includes a one-line fix.
@@ -51,7 +53,9 @@ It names EN 301 549 (which requires WCAG 2.1 AA, the legal benchmark) and says t
 
 ## Limits
 
+- Speed: about 1 s per 1,600-element page with a deliberately heavy stylesheet (30 pages in 35 s); typical sites are much faster.
+
 - Static analysis only. Axe-core's own docs say automation finds roughly 57% of WCAG issues; this finds fewer. Treat it as a first pass before manual and screen reader testing.
 - CSS rules whose selectors it cannot evaluate and that set colours are counted in the report ("ignored CSS rules") so you know contrast may be incomplete.
-- CSS support: tag/class/id/attribute selectors, descendant and child combinators, `:root`, `var()`. Sibling combinators, `:not()`, pseudo-classes other than `:root`/`:first-child`, and width-conditional media queries are ignored.
+- CSS support: tag/class/id/attribute selectors, descendant, child and sibling combinators, `:root`, `var()`. `:nth-child()`, `:is()`/`:where()`, other pseudo-classes beyond `:root`, `:first-child` and `:not()`, and width-conditional media queries are ignored.
 - Statement templates are drafts, not legal advice. Whether your business is exempt, and which authority handles complaints, depends on your national law; check it.

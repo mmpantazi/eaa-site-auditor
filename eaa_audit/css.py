@@ -123,8 +123,6 @@ def _compile(selector):
                 comp = {}
             c = m.group("comb").strip()
             comb = c or " "
-            if comb in "+~":
-                return None
         elif m.group("tag"):
             comp["tag"] = m.group("tag").lower()
         elif m.group("cls"):
@@ -135,6 +133,12 @@ def _compile(selector):
             comp.setdefault("attr", []).append(m.group("attr"))
         else:
             ps = m.group("pseudo")
+            if ps.startswith(":not(") and ps.endswith(")"):
+                inner = _compile(ps[5:-1])
+                if not inner or len(inner) != 1:
+                    return None
+                comp.setdefault("not", []).append(inner[0][1])
+                continue
             if ps.startswith("::") or ps.split("(")[0] not in (":root", ":first-child"):
                 return None
             comp.setdefault("pseudo", []).append(ps)
@@ -159,6 +163,8 @@ def _match_compound(node, comp):
             return False
         if val and node.get(name) != val.strip().strip("\"'"):
             return False
+    if any(_match_compound(node, neg) for neg in comp.get("not", [])):
+        return False
     for ps in comp.get("pseudo", []):
         if ps == ":root" and node.tag != "html":
             return False
@@ -167,6 +173,13 @@ def _match_compound(node, comp):
                                            if not isinstance(c, str)), None) is not node):
             return False
     return True
+
+
+def _previous_siblings(node):
+    if node.parent is None:
+        return []
+    kids = [c for c in node.parent.children if not isinstance(c, str)]
+    return kids[:kids.index(node)][::-1]
 
 
 def _bucket_key(comp):
@@ -187,6 +200,11 @@ def matches(node, compiled):
         if idx == 0:
             return True
         prev_comb = compiled[idx][0]
+        if prev_comb in ("+", "~"):
+            sibs = _previous_siblings(n)
+            if prev_comb == "+":
+                return bool(sibs) and rec(sibs[0], idx - 1)
+            return any(rec(x, idx - 1) for x in sibs)
         if prev_comb == ">":
             return n.parent is not None and rec(n.parent, idx - 1)
         return any(rec(a, idx - 1) for a in n.ancestors())

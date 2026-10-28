@@ -21,6 +21,7 @@ FIX = {
     "meta-refresh": "Use a server redirect, or let the user control the reload.",
     "moving-content": "Replace with CSS animation that respects prefers-reduced-motion and can be paused.",
     "client-rendered": "Scan a pre-rendered build, or test the live page with a browser-based tool.",
+    "page-headings": "Mark section titles up as real headings instead of bold or large text.",
     "page-h1": "Give each page one <h1> describing it.",
     "heading-order": "Do not skip levels: h2 should be followed by h3, not h4. Style with CSS instead.",
     "empty-heading": "Remove the empty heading or add text.",
@@ -39,6 +40,7 @@ FIX = {
     "contrast-unknown": "Measure with a contrast checker in the browser, using the worst-case background.",
     "target-size": "Make the clickable area at least 24x24 px, or leave 24 px of space around it.",
     "focus-visible": "Remove outline:none, or add a clear :focus-visible style (outline, box-shadow).",
+    "focus-blur": "Delete the onfocus=\"blur()\" handler; use CSS to style focus instead.",
     "focus-obscured": "Add scroll-padding-top equal to the sticky header height on html.",
     "link-underline": "Keep underlines on links inside text, or add another non-colour cue.",
 }

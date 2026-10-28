@@ -65,7 +65,7 @@ def to_text(result, color=False):
     if s["missing_stylesheets"]:
         lines.append(f"Note: {len(s['missing_stylesheets'])} linked stylesheet(s) not found in the folder.")
     if s["ignored_css_rules"]:
-        lines.append(f"Note: {s['ignored_css_rules']} CSS rule(s) set colours with selectors this tool cannot evaluate (e.g. :not(), sibling combinators); contrast may be incomplete.")
+        lines.append(f"Note: {s['ignored_css_rules']} CSS rule(s) set colours with selectors this tool cannot evaluate (e.g. :nth-child(), :is()); contrast may be incomplete.")
     lines.append(f"Result: {s['failures']} failing issue type(s) ({s['failure_instances']} places), {s['reviews']} item(s) to review by hand.")
     lines.append("Automated checks find only part of all WCAG problems; see 'manual checks' in the HTML/JSON report.")
     return "\n".join(lines)

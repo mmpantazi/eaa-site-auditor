@@ -211,6 +211,8 @@ class PageChecker:
     def headings(self):
         hs = [n for n in self.nodes if re.fullmatch(r"h[1-6]", n.tag) and not self.hidden(n)]
         body = next((n for n in self.nodes if n.tag == "body"), None)
+        if body is not None and not hs and len(_norm(body.text())) > 400:
+            self.add("page-headings", "2.4.6", "AA", "review", body, "Long page with no headings: use <h1>–<h6> so screen reader users can navigate by section.")
         if body is not None and hs and not any(h.tag == "h1" for h in hs):
             self.add("page-h1", "2.4.6", "AA", "review", hs[0], "Page has headings but no <h1>.")
         prev = 0
@@ -282,6 +284,8 @@ class PageChecker:
 
     def interaction(self):
         for n in self.nodes:
+            if re.search(r"\bblur\s*\(", n.get("onfocus") or ""):
+                self.add("focus-blur", "2.4.7", "AA", "fail", n, "onfocus handler calls blur(): keyboard users can never rest focus on this element.")
             if n.get("draggable") == "true" or n.has("ondragstart"):
                 self.add("dragging", "2.5.7", "AA", "review", n, "Draggable element: make sure there is a click or keyboard alternative.")
             if n.tag not in ("a", "button", "input", "select", "textarea", "summary") and (n.has("onclick")) \
@@ -292,9 +296,9 @@ class PageChecker:
         return float(st.get("font-size", "16px")[:-2])
 
     def _bg(self, node):
-        """Return (rgb, certain). Walk ancestors compositing backgrounds."""
+        """Return (rgb, culprit): culprit is the element that makes the background uncertain, if any."""
         layers = []
-        certain = True
+        culprit = None
         for n in [node, *node.ancestors()]:
             if n.tag == "#document":
                 continue
@@ -302,23 +306,22 @@ class PageChecker:
             bgv = st.get("background-color") or ""
             short = st.get("background") or ""
             img = st.get("background-image", "") + " " + short
-            if "gradient" in img or "url(" in img:
-                certain = False
-            if "var-unresolved" in bgv + short:
-                certain = False
             c = C.parse_color(bgv) or (C.parse_color(_color_token(short)) if short else None)
-            if bgv and C.parse_color(bgv) is None and "var-unresolved" not in bgv:
-                certain = False
+            uncertain = "var-unresolved" in bgv + short or (bgv and C.parse_color(bgv) is None)
+            if "gradient" in img or ("url(" in img and not ("no-repeat" in img and c)):
+                uncertain = True
+            if st.get("opacity") not in (None, "1") and n is not node:
+                uncertain = True
+            if uncertain and culprit is None:
+                culprit = n
             if c and c[3] > 0:
                 layers.append(c)
                 if c[3] == 1:
                     break
-            if st.get("opacity") not in (None, "1") and n is not node:
-                certain = False
         base = (255, 255, 255, 1.0)
         for layer in reversed(layers):
             base = C.blend(layer, base)
-        return base, certain
+        return base, culprit
 
     def contrast(self):
         seen = set()
@@ -336,12 +339,11 @@ class PageChecker:
                 if "var-unresolved" in fg_raw:
                     self.ctx.unresolved.add(self.path)
                 continue
-            bg, certain = self._bg(n)
-            if not certain:
-                key = ("img", n.tag, tuple(n.classes()))
-                if key not in seen:
-                    seen.add(key)
-                    self.add("contrast-unknown", "1.4.3", "AA", "review", n, "Text sits on a gradient/image/semi-transparent layer: check contrast by hand.")
+            bg, culprit = self._bg(n)
+            if culprit is not None:
+                if id(culprit) not in seen:
+                    seen.add(id(culprit))
+                    self.add("contrast-unknown", "1.4.3", "AA", "review", culprit, "Text sits on this gradient/image/semi-transparent layer: check contrast by hand.")
                 continue
             fg = C.blend(fg, bg)
             ratio = C.contrast_ratio(fg, bg)
