@@ -1,1 +1,0 @@
-﻿Continue this project where you left off. Re-read RESEARCH.md and the git log first. Follow the workflow in your CLAUDE.md.
