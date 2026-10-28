@@ -510,6 +510,11 @@ class ReviewPassTests(unittest.TestCase):
         res = self.sheet(css, '<p class="vh">Hidden label</p>')
         self.assertNotIn("color-contrast", {f.rule for f in res.findings})
 
+    def test_same_colour_text_is_review_not_fail(self):
+        res = self.sheet(".t{color:#fff;background:#fff}")
+        kinds = {(f.rule, f.kind) for f in res.findings if f.rule.startswith("contrast") or f.rule == "color-contrast"}
+        self.assertEqual(kinds, {("contrast-same", "review")})
+
     def test_text_indent_icon_button_skipped(self):
         res = self.sheet("button{text-indent:-5000px;overflow:hidden;background:#d2e2f1;color:#1d70b8}", "<button>Search</button>")
         self.assertNotIn("color-contrast", {f.rule for f in res.findings})

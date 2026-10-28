@@ -228,7 +228,7 @@ NATIONAL_LAW = {"en": "", "ro": "Legea nr. 232/2022", "de": "Barrierefreiheitsst
 AUTHORITY_HINT = {
     "en": "national market surveillance / enforcement body and URL",
     "ro": "autoritatea competentă pentru sectorul dvs. (ANPC, Autoritatea pentru Digitalizarea României, ANCOM, CNA …) și URL",
-    "de": "zuständige Marktüberwachungsbehörde und URL",
+    "de": "zuständige Marktüberwachungsbehörde (z. B. MLBF Magdeburg) und URL",
 }
 
 

@@ -38,6 +38,7 @@ FIX = {
     "click-no-keyboard": "Use a real <button> or <a href>, or add role, tabindex=\"0\" and key handlers.",
     "color-contrast": "Darken the text or lighten the background until the ratio reaches 4.5:1 (3:1 for large text).",
     "contrast-unknown": "Measure with a contrast checker in the browser, using the worst-case background.",
+    "contrast-same": "If the text is meant to be seen, give it a different colour; if it is hidden on purpose, hide it properly (visually-hidden class).",
     "target-size": "Make the clickable area at least 24x24 px, or leave 24 px of space around it.",
     "focus-visible": "Remove outline:none, or add a clear :focus-visible style (outline, box-shadow).",
     "focus-blur": "Delete the onfocus=\"blur()\" handler; use CSS to style focus instead.",

@@ -369,6 +369,12 @@ class PageChecker:
                 continue
             fg = C.blend(fg, bg)
             ratio = C.contrast_ratio(fg, bg)
+            if ratio < 1.05:
+                key = ("same", id(n))
+                if key not in seen:
+                    seen.add(key)
+                    self.add("contrast-same", "1.4.3", "AA", "review", n, "Text colour is identical to its background: hidden text, or a CSS cascade this tool resolved wrongly.")
+                continue
             size = self._font_px(st)
             weight = st.get("font-weight", "400").strip().lower()
             bold = weight in ("bold", "bolder") or (weight.isdigit() and int(weight) >= 700)
