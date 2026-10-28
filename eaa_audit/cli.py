@@ -16,10 +16,12 @@ def build_parser():
     sub = p.add_subparsers(dest="cmd", required=True)
 
     s = sub.add_parser("scan", help="scan a folder of built HTML")
-    s.add_argument("folder")
+    s.add_argument("folder", help="folder of built HTML, or a single .html file")
     s.add_argument("--format", choices=["text", "json", "html"], default="text")
     s.add_argument("-o", "--output", help="write report to a file instead of stdout")
     s.add_argument("--ignore", default="", metavar="RULES", help="comma-separated rule ids to skip, e.g. page-h1,target-size")
+    s.add_argument("--baseline", metavar="FILE", help="ignore findings recorded in this file (only new problems fail the build)")
+    s.add_argument("--write-baseline", metavar="FILE", help="record the current findings in FILE and exit 0")
     s.add_argument("--fail-on", choices=["fail", "review", "never"], default="fail",
                    help="exit code 1 when this severity is found (default: fail)")
 
@@ -34,6 +36,10 @@ def build_parser():
     st.add_argument("--format", choices=["md", "html"], default="html")
     st.add_argument("-o", "--output", help="output file (default: stdout)")
     return p
+
+
+def fingerprint(f):
+    return "|".join((f.rule, f.file, f.message, f.snippet))
 
 
 def _write(text, path):
@@ -54,8 +60,8 @@ def main(argv=None):
         print(f"Wrote {args.output}. Fill in the fields, then run: eaa-audit statement <folder>", file=sys.stderr)
         return 0
 
-    if not os.path.isdir(args.folder):
-        print(f"Not a folder: {args.folder}", file=sys.stderr)
+    if not os.path.exists(args.folder):
+        print(f"Not found: {args.folder}", file=sys.stderr)
         return 2
     result = scan(args.folder)
     if not result.pages:
@@ -65,6 +71,19 @@ def main(argv=None):
     result.findings = [f for f in result.findings if f.rule not in ignored]
 
     if args.cmd == "scan":
+        if args.baseline:
+            try:
+                with open(args.baseline, encoding="utf-8") as fh:
+                    known = set(json.load(fh))
+            except (OSError, ValueError) as e:
+                print(f"Cannot read baseline {args.baseline}: {e}", file=sys.stderr)
+                return 2
+            result.findings = [f for f in result.findings if fingerprint(f) not in known]
+        if args.write_baseline:
+            with open(args.write_baseline, "w", encoding="utf-8") as fh:
+                json.dump(sorted({fingerprint(f) for f in result.findings}), fh, indent=1)
+            print(f"Recorded {len(result.findings)} finding(s) in {args.write_baseline}", file=sys.stderr)
+            return 0
         if args.format == "json":
             out = report.to_json(result)
         elif args.format == "html":

@@ -18,7 +18,16 @@ Or `pip install .` and use the `eaa-audit` command. Tests: `python3 -m unittest 
 
 Publish the generated statement at a stable URL such as `/accessibility` and link it from the footer of every page.
 
-`--fail-on fail|review|never` controls the exit code (default `fail`); `--ignore rule-a,rule-b` skips rules. Exit code 2 means a usage problem (e.g. no HTML files found). Every finding includes a one-line fix.
+`scan` also accepts a single `.html` file. `--fail-on fail|review|never` controls the exit code (default `fail`); `--ignore rule-a,rule-b` skips rules. Exit code 2 means a usage problem (e.g. no HTML files found). Every finding includes a one-line fix.
+
+### In CI
+
+Adopt it on an existing site without fixing everything first:
+
+```bash
+python3 -m eaa_audit scan ./dist --write-baseline a11y-baseline.json   # once, commit the file
+python3 -m eaa_audit scan ./dist --baseline a11y-baseline.json          # fails only on new problems
+```
 
 ## What it checks
 
@@ -43,13 +52,22 @@ Results are `FAIL` (definite) or `REVIEW` (a human must decide). Identical findi
 
 ## Statement
 
-`init` creates `eaa-statement.json`. Fill in organisation, URL, contact e-mail and the enforcement authority for your country; set `microenterprise` if it applies. `statement` then writes the text with:
+`init` creates `eaa-statement.json`; fill it in, then run `statement`.
 
-- conformance status and known limitations generated from the scan;
-- the list of things only a human can verify;
-- contact, response time, enforcement body, date and method.
+| Field | Meaning |
+|---|---|
+| `organisation`, `website_url`, `contact_email` | required; shown as `[TODO: …]` until set |
+| `enforcement_authority` | the body users can complain to in your country and sector (required) |
+| `national_law` | preset for `--lang ro` (Legea 232/2022) and `de` (BFSG) |
+| `microenterprise` | adds the exemption note (fewer than 10 staff, up to EUR 2M) |
+| `alternatives` | accessible alternatives for known problems (phone, e-mail, PDF …) |
+| `measures` | what you do to keep the site accessible |
+| `manual_review_done`, `manual_reviewer` | set after a human evaluation (keyboard, screen reader) |
+| `response_days`, `review_months`, `date`, `contact_phone`, `contact_address` | optional |
 
-It names EN 301 549 (which requires WCAG 2.1 AA, the legal benchmark) and says the newer WCAG 2.2 criteria are also checked. The Romanian and German presets fill in the national law (Legea 232/2022, BFSG). It says "partially conformant" unless you set `manual_review_done: true` **and** the scan has no failures. Unfilled fields are written as `[TODO: …]` and the command warns. The generated HTML passes this tool's own scan.
+The text contains the conformance status, known limitations from the scan (grouped by WCAG criterion), what only a human can verify, technologies detected (HTML, CSS, JavaScript, WAI-ARIA), contact, response time, enforcement body, review date and cadence. It names EN 301 549 (which requires WCAG 2.1 AA, the legal benchmark) and says the newer WCAG 2.2 criteria are also checked.
+
+It says "partially conformant" unless you set `manual_review_done: true` **and** the scan has no failures. Unfilled fields are written as `[TODO: …]` and the command warns. The generated HTML passes this tool's own scan.
 
 ## Limits
 

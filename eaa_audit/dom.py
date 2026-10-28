@@ -4,7 +4,6 @@ from html.parser import HTMLParser
 
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link",
         "meta", "param", "source", "track", "wbr"}
-RAW_TEXT = {"script", "style"}
 
 
 class Node:

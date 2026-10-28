@@ -27,6 +27,7 @@ class ScanResult:
     remote_styles: list
     missing_styles: list
     unsupported_css: list
+    technologies: list = field(default_factory=list)
 
 
 def find_pages(root):
@@ -46,7 +47,10 @@ def _read(path):
 
 def scan(root):
     root = os.path.abspath(root)
-    pages = find_pages(root)
+    if os.path.isfile(root):
+        pages, root = [root], os.path.dirname(root)
+    else:
+        pages = find_pages(root)
     sheet_cache, remote, missing = {}, set(), set()
     findings, parsed_sheets, unsupported = [], [], set()
     ctx = SiteContext()
@@ -60,6 +64,7 @@ def scan(root):
 
     inline_seen = 0
     titles = {}
+    tech = {"HTML"}
     for page in pages:
         rel = os.path.relpath(page, root)
         tree = parse_html(_read(page))
@@ -83,6 +88,13 @@ def scan(root):
                 parsed_rules = parse_stylesheet(node.text(), rel, order_start=100000 * inline_seen)
                 rules.extend(parsed_rules)
                 parsed_sheets.append(parsed_rules)
+        for node in tree.walk():
+            if node.tag == "script":
+                tech.add("JavaScript")
+            if any(k == "role" or k.startswith("aria-") for k in node.attrs):
+                tech.add("WAI-ARIA")
+        if rules:
+            tech.add("CSS")
         cascade = Cascade(rules, tree)
         page_findings = PageChecker(tree, cascade, rel, ctx).run()
         unsupported |= cascade.unsupported
@@ -90,7 +102,7 @@ def scan(root):
         findings.extend(page_findings)
 
     for rules in parsed_sheets:
-        findings.extend(stylesheet_findings(rules, None))
+        findings.extend(stylesheet_findings(rules))
     for title, files in titles.items():
         if title and len(files) >= 3:
             for f in files[1:]:
@@ -98,7 +110,8 @@ def scan(root):
                                         f'Same <title> "{title}" as {len(files) - 1} other page(s): titles should tell pages apart.'))
     return ScanResult(root, [os.path.relpath(p, root) for p in pages], findings,
                       sorted(os.path.relpath(p, root) for p in sheet_cache),
-                      sorted(remote), sorted(missing), sorted(unsupported))
+                      sorted(remote), sorted(missing), sorted(unsupported),
+                      sorted(tech, key=["HTML", "CSS", "JavaScript", "WAI-ARIA"].index))
 
 
 def _title(tree):

@@ -448,6 +448,48 @@ class ReviewPassTests(unittest.TestCase):
         found = [f for f in scan(make_site(files)).findings if f.rule == "contrast-unknown"]
         self.assertEqual(len(found), 1)
 
+    def test_single_file_scan(self):
+        site = make_site({"i.html": page('<img src="a.png">'), "other.html": page("<p>fine</p>")})
+        code, out, _ = run_cli("scan", os.path.join(site, "other.html"))
+        self.assertEqual(code, 0)
+        self.assertIn("Scanned 1 page", out)
+
+    def test_baseline_roundtrip(self):
+        site = make_site({"i.html": page('<img src="a.png">')})
+        base = os.path.join(_tmp(), "base.json")
+        self.assertEqual(run_cli("scan", site, "--write-baseline", base)[0], 0)
+        self.assertEqual(run_cli("scan", site, "--baseline", base)[0], 0)
+        with open(os.path.join(site, "new.html"), "w") as fh:
+            fh.write(page('<button></button>'))
+        self.assertEqual(run_cli("scan", site, "--baseline", base)[0], 1)
+
+    def test_bad_baseline_file(self):
+        site = make_site({"i.html": page("<p>x</p>")})
+        self.assertEqual(run_cli("scan", site, "--baseline", "/nonexistent.json")[0], 2)
+
+    def test_garbage_input_does_not_crash(self):
+        import random
+        rnd = random.Random(3)
+        frags = ["<div", "</div>", "<img>", "{", "}", "a{color:", "<style>", "</style>", "var(--x", "@media(", "<svg>", "\x00", "&#x;", "calc(1px+", "<!--"]
+        for _ in range(40):
+            junk = "".join(rnd.choice(frags) + rnd.choice(["", " ", "x"]) for _ in range(rnd.randint(1, 60)))
+            scan(make_site({"a.html": junk, "b.html": '<link rel=stylesheet href=s.css>' + junk, "s.css": junk}))
+
+    def test_technologies_detected(self):
+        files = {"i.html": page('<p role="note">x</p><script>1</script>', '<style>p{color:#000}</style>')}
+        self.assertEqual(scan(make_site(files)).technologies, ["HTML", "CSS", "JavaScript", "WAI-ARIA"])
+        self.assertEqual(scan(make_site({"i.html": page("<p>x</p>")})).technologies, ["HTML"])
+
+    def test_statement_alternatives_technologies_review(self):
+        r = scan(make_site({"i.html": page("<p>x</p>")}))
+        for lang in statement.LANGS:
+            cfg = dict(CFG, alternatives=["Phone support +40 1"], review_months=6)
+            text = statement.render(r, cfg, lang, "md")[0]
+            self.assertIn("Phone support +40 1", text)
+            self.assertIn("HTML", text)
+            self.assertIn("6", text)
+            self.assertNotIn("{", text)
+
     def test_empty_folder_exits_2(self):
         code, _, err = run_cli("scan", _tmp())
         self.assertEqual(code, 2)

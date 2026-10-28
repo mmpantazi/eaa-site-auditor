@@ -3,7 +3,6 @@
 import re
 
 from . import color as C
-from .css import Cascade
 from .model import Finding
 
 FORM_SKIP = {"hidden", "submit", "button", "reset", "image"}
@@ -387,7 +386,7 @@ def _color_token(value):
     return None
 
 
-def stylesheet_findings(rules, path_of):
+def stylesheet_findings(rules):
     """Focus-visibility and sticky-obstruction checks over all rules of the site."""
     out = []
     removes = []

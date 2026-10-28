@@ -1,7 +1,6 @@
 """Draft the accessibility statement from scan results and a small config file."""
 
 import datetime
-import re
 from html import escape
 
 from .report import MANUAL_ONLY, summary
@@ -98,6 +97,9 @@ T = {
         "title": "Accessibility statement for {org}",
         "intro": "{org} is committed to making {site} accessible to people with disabilities, in line with the European Accessibility Act (Directive (EU) 2019/882) and the standard EN 301 549, which refers to the Web Content Accessibility Guidelines (WCAG).",
         "law": "National law: {law}.",
+        "alts": "Accessible alternatives available for the content above:",
+        "tech": "Technologies this website relies on: {tech}.",
+        "review": "We review this statement at least every {months} months.",
         "h_status": "Conformance status",
         "status_partial": "{site} is partially conformant with EN 301 549 (which requires WCAG 2.1 level AA). We also check the newer WCAG 2.2 criteria. Partially conformant means that some parts of the content do not fully meet the standard.",
         "status_full": "{site} is fully conformant with EN 301 549 (WCAG 2.1 level AA) and the WCAG 2.2 level AA criteria we checked, based on the evaluation described below.",
@@ -128,6 +130,9 @@ T = {
         "title": "Declarație de accesibilitate pentru {org}",
         "intro": "{org} se angajează să facă {site} accesibil persoanelor cu dizabilități, în conformitate cu Actul european privind accesibilitatea (Directiva (UE) 2019/882) și cu standardul EN 301 549, care face trimitere la Ghidul pentru accesibilitatea conținutului web (WCAG).",
         "law": "Legislația națională: {law}.",
+        "alts": "Alternative accesibile disponibile pentru conținutul de mai sus:",
+        "tech": "Tehnologii pe care se bazează acest site: {tech}.",
+        "review": "Revizuim această declarație cel puțin o dată la {months} luni.",
         "h_status": "Starea de conformitate",
         "status_partial": "{site} este parțial conform cu EN 301 549 (care cere WCAG 2.1 nivel AA). Verificăm și criteriile mai noi din WCAG 2.2. Parțial conform înseamnă că unele părți ale conținutului nu respectă pe deplin standardul.",
         "status_full": "{site} este pe deplin conform cu EN 301 549 (WCAG 2.1 nivel AA) și cu criteriile WCAG 2.2 nivel AA verificate, pe baza evaluării descrise mai jos.",
@@ -158,6 +163,9 @@ T = {
         "title": "Erklärung zur Barrierefreiheit für {org}",
         "intro": "{org} bemüht sich, {site} für Menschen mit Behinderungen zugänglich zu machen, gemäß dem Europäischen Barrierefreiheitsgesetz (Richtlinie (EU) 2019/882) und der Norm EN 301 549, die auf die Web Content Accessibility Guidelines (WCAG) verweist.",
         "law": "Nationales Recht: {law}.",
+        "alts": "Barrierefreie Alternativen für die oben genannten Inhalte:",
+        "tech": "Technologien, auf die sich diese Website stützt: {tech}.",
+        "review": "Wir überprüfen diese Erklärung mindestens alle {months} Monate.",
         "h_status": "Stand der Vereinbarkeit",
         "status_partial": "{site} ist teilweise mit EN 301 549 (die WCAG 2.1 Stufe AA verlangt) vereinbar. Wir prüfen zusätzlich die neueren Kriterien von WCAG 2.2. Teilweise vereinbar bedeutet, dass einige Inhalte die Norm nicht vollständig erfüllen.",
         "status_full": "{site} ist auf Grundlage der unten beschriebenen Bewertung vollständig mit EN 301 549 (WCAG 2.1 Stufe AA) und den geprüften WCAG-2.2-Kriterien Stufe AA vereinbar.",
@@ -233,6 +241,8 @@ def starter_config(lang="en"):
         "contact_phone": "",
         "contact_address": "",
         "response_days": 14,
+        "review_months": 12,
+        "alternatives": [],
         "microenterprise": False,
         "national_law": NATIONAL_LAW[lang],
         "enforcement_authority": TODO.format(AUTHORITY_HINT[lang]),
@@ -290,6 +300,9 @@ def build_blocks(result, cfg, lang):
     if rsc:
         blocks.append(("p", t["review_intro"]))
         blocks.append(("ul", [f"{sc} {names.get(sc, '')}".strip() for sc in rsc]))
+    alts = [a for a in cfg.get("alternatives", []) if a]
+    if alts:
+        blocks += [("p", t["alts"]), ("ul", alts)]
     state = t["manual_done"] if manual_done else t["manual_todo"]
     blocks.append(("p", t["manual_intro"].format(state=state)))
     blocks.append(("ul", MANUAL_LOCAL[lang]))
@@ -309,7 +322,10 @@ def build_blocks(result, cfg, lang):
     auth = _field(cfg, "enforcement_authority", "enforcement_authority", todos)
     blocks += [("h2", t["h_enforce"]), ("p", t["enforce"].format(auth=auth))]
     manual = t["prep_manual"].format(who=cfg.get("manual_reviewer") or "-") if manual_done else ""
-    blocks += [("h2", t["h_prep"]), ("p", t["prep"].format(date=today, pages=s["pages"], manual=manual))]
+    blocks += [("h2", t["h_prep"]),
+               ("p", t["prep"].format(date=today, pages=s["pages"], manual=manual)),
+               ("p", t["tech"].format(tech=", ".join(result.technologies))),
+               ("p", t["review"].format(months=cfg.get("review_months") or 12))]
     return blocks, len(todos)
 
 
