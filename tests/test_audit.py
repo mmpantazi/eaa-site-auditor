@@ -369,6 +369,15 @@ class StatementTests(unittest.TestCase):
         for lang in statement.LANGS:
             self.assertTrue(sample <= set(statement.SC_NAMES[lang]))
 
+    def test_translations_are_complete(self):
+        from eaa_audit import i18n
+        for table in (i18n.T, i18n.SC_NAMES, i18n.NATIONAL_LAW, i18n.AUTHORITY_HINT):
+            for lang in statement.LANGS:
+                self.assertEqual(set(table[lang]) if isinstance(table[lang], dict) else True,
+                                 set(table["en"]) if isinstance(table["en"], dict) else True, lang)
+        for lang in statement.LANGS:
+            self.assertEqual(len(i18n.MANUAL_LOCAL[lang]), len(i18n.MANUAL_LOCAL["en"]))
+
     def test_html_escaping(self):
         text, _ = statement.render(self.result("<p>x</p>"), dict(CFG, organisation="A <b>&Co"), "en", "html")
         self.assertIn("A &lt;b&gt;&amp;Co", text)

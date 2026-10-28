@@ -2,7 +2,7 @@
 
 Scans a **built static site folder** (`dist/`, `public/`, `_site/`) for common WCAG 2.2 failures and drafts the accessibility statement that the European Accessibility Act expects from many B2C sites. Pure Python standard library: no browser, no network, no install step beyond Python 3.9+.
 
-RO: verifică accesibilitatea unui site (WCAG) și scrie declarația de accesibilitate (EN/RO/DE).
+RO: verifică accesibilitatea unui site (WCAG) și scrie declarația de accesibilitate (EN/RO/DE/FR/ES/IT).
 
 ## Run
 
@@ -57,8 +57,8 @@ Results are `FAIL` (definite) or `REVIEW` (a human must decide). Identical findi
 | Field | Meaning |
 |---|---|
 | `organisation`, `website_url`, `contact_email` | required; shown as `[TODO: …]` until set |
-| `enforcement_authority` | the body users can complain to in your country and sector (required) |
-| `national_law` | preset for `--lang ro` (Legea 232/2022) and `de` (BFSG) |
+| `enforcement_authority` | the body users can complain to in your country and sector (required). It differs by country and sector; [Deque's country list](https://www.deque.com/accessibility-compliance/european-accessibility-act-eaa/country-compliance-data/) is a starting point, but check the national law |
+| `national_law` | preset for `ro` (Legea 232/2022), `de` (BFSG), `es` (Ley 11/2023), `it` (D.Lgs. 82/2022); check it, then add yours for other countries |
 | `microenterprise` | adds the exemption note (fewer than 10 staff, up to EUR 2M) |
 | `alternatives` | accessible alternatives for known problems (phone, e-mail, PDF …) |
 | `measures` | what you do to keep the site accessible |

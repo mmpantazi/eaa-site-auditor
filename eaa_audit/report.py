@@ -3,20 +3,10 @@
 import json
 from html import escape
 
+from .i18n import MANUAL_LOCAL
 from .scanner import group
 
-MANUAL_ONLY = [
-    "Keyboard operation of every feature, including custom widgets (2.1.1, 2.1.2)",
-    "Whether alt texts are accurate and useful, not just present (1.1.1)",
-    "Captions, audio descriptions and transcripts content quality (1.2.x)",
-    "Logical reading order and meaningful sequence (1.3.2)",
-    "Colour contrast of text over images, gradients and UI states such as hover (1.4.3, 1.4.11)",
-    "Reflow at 320 px and 400% zoom, text spacing (1.4.10, 1.4.12)",
-    "Focus visibility on every component and focus order (2.4.3, 2.4.7, 2.4.11)",
-    "Consistent navigation and help placement across pages (3.2.3, 3.2.6)",
-    "Error identification and suggestions in forms (3.3.1, 3.3.3)",
-    "Screen reader behaviour with at least one real screen reader (4.1.2, 4.1.3)",
-]
+MANUAL_ONLY = MANUAL_LOCAL["en"]
 
 
 def summary(result):
